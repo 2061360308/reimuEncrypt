@@ -1,0 +1,107 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: reimuEncrypt-linux
+            asset_name: reimuEncrypt-linux
+          - os: windows-latest
+            artifact_name: reimuEncrypt-windows.exe
+            asset_name: reimuEncrypt-windows
+          - os: macos-latest
+            artifact_name: reimuEncrypt-macos
+            asset_name: reimuEncrypt-macos
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cmake --build . --config Release
+
+    - name: Prepare artifact
+      shell: bash
+      run: |
+        mkdir -p artifact
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          cp ${{github.workspace}}/build/Release/reimuEncrypt.exe artifact/${{ matrix.artifact_name }}
+        else
+          cp ${{github.workspace}}/build/reimuEncrypt artifact/${{ matrix.artifact_name }}
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.asset_name }}
+        path: artifact/${{ matrix.artifact_name }}
+
+  release:
+    name: Create or Update Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Display structure of downloaded files
+        run: ls -R
+
+      - name: Get tag or create tag for latest build
+        id: tag
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "Using existing tag: ${GITHUB_REF#refs/tags/}"
+          else
+            latest_tag=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name 2>/dev/null || echo "")
+            if [[ -z "$latest_tag" || "$latest_tag" == "null" ]]; then
+              echo "tag=latest" >> $GITHUB_OUTPUT
+              echo "Creating new latest tag"
+            else
+              echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+              echo "Using existing latest tag: $latest_tag"
+            fi
+          fi
+
+      - name: Create or Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          draft: false
+          prerelease: false
+          files: |
+            reimuEncrypt-linux/reimuEncrypt-linux
+            reimuEncrypt-windows/reimuEncrypt-windows.exe
+            reimuEncrypt-macos/reimuEncrypt-macos
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

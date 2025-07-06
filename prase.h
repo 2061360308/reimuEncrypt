@@ -1,0 +1,74 @@
+﻿#pragma once
+
+#include <string>
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include "lexbor/html/html.h"
+#include "lexbor/css/css.h"
+#include "lexbor/selectors/selectors.h"
+
+/**
+ * 读取整个文件内容到字符串
+ * 
+ * @param filePath 文件路径
+ * @param encoding 文件编码 (如 "utf-8", "gbk", "gb2312" 等)
+ * @return 文件内容字符串
+ */
+std::string readFileToString(const std::string& filePath, const std::string& encoding = "utf-8");
+
+/**
+ * 将字符串内容写入文件
+ * 
+ * @param filePath 文件路径
+ * @param content 要写入的内容
+ * @return 操作是否成功
+ */
+bool writeStringToFile(const std::string& filePath, const std::string& content);
+
+/**
+ * 使用Lexbor实现的CSS选择器解析函数
+ * 
+ * @param html HTML字符串
+ * @param selector CSS选择器
+ * @param index 要返回的元素索引(0-based)，默认为0（第一个匹配元素）
+ * @return 指定索引的匹配元素内容，如果不存在则返回空字符串
+ *
+ * @details 支持的CSS选择器语法：
+ *  - 基本选择器:
+ *    - 标签选择器: div, p, article
+ *    - ID选择器: #header, #content
+ *    - 类选择器: .container, .menu
+ *    - 通配符: *
+ * 
+ *  - 组合选择器:
+ *    - 后代选择器: div p
+ *    - 子元素选择器: div > p
+ *    - 相邻兄弟选择器: div + p
+ *    - 通用兄弟选择器: div ~ p
+ * 
+ *  - 属性选择器:
+ *    - [attr] - 具有attr属性的元素
+ *    - [attr=value] - attr属性值为value的元素
+ *    - [attr~=value] - attr属性值包含value单词的元素
+ *    - [attr^=value] - attr属性值以value开头的元素
+ *    - [attr$=value] - attr属性值以value结尾的元素
+ *    - [attr*=value] - attr属性值包含value子串的元素
+ * 
+ *  - 伪类选择器:
+ *    - :first-child, :last-child - 第一个/最后一个子元素
+ *    - :nth-child(n), :nth-of-type(n) - 第n个子元素/同类型第n个元素
+ *    - :not(selector) - 不匹配指定选择器的元素
+ * 
+ * @example
+ *  // 获取第一个文章元素
+ *  std::string article = querySelector(html, "article");
+ *  
+ *  // 获取ID为header的元素
+ *  std::string header = querySelector(html, "#header");
+ *  
+ *  // 获取所有菜单项中的第三个
+ *  std::string thirdMenuItem = querySelector(html, ".menu-item", 2); // 索引从0开始
+ */
+std::string querySelector(const std::string& html, const std::string& selector, size_t index = 0);

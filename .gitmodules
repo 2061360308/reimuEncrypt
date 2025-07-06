@@ -1,0 +1,12 @@
+[submodule "deps/cryptopp-cmake"]
+	path = deps/cryptopp-cmake
+	url = https://github.com/abdes/cryptopp-cmake.git
+[submodule "deps/lexbor"]
+	path = deps/lexbor
+	url = https://github.com/lexbor/lexbor.git
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json.git
+[submodule "deps/cpp-base64"]
+	path = deps/cpp-base64
+	url = https://github.com/ReneNyffenegger/cpp-base64.git
