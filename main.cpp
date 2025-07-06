@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     if (argc < 2) {
         // 没有提供参数，使用当前路径下的encrypted.json
         jsonFilePath = fs::current_path() / "encrypted.json";
-        cout << "未提供路径参数，将使用当前路径下的encrypted.json" << endl;
+        cout << "未提供路径参数，在当前路径下查找encrypted.json" << endl;
     } else {
         // 提供了路径参数
         fs::path inputPath = argv[1];
@@ -25,23 +25,23 @@ int main(int argc, char* argv[])
         if (fs::is_directory(inputPath)) {
             // 如果是文件夹，在该文件夹下找encrypted.json
             jsonFilePath = inputPath / "encrypted.json";
-            cout << "提供的是文件夹路径，将查找: " << jsonFilePath.string() << endl;
+            cout << "在" << jsonFilePath.string() << "下查找encrypted.json" << endl;
         } else if (inputPath.extension() == ".json") {
             // 如果直接给了json文件，直接使用
             jsonFilePath = inputPath;
-            cout << "提供的是JSON文件路径: " << jsonFilePath.string() << endl;
+            cout << "加载配置文件: " << jsonFilePath.string() << endl;
         } else {
             // 提供的既不是文件夹也不是json文件
-            cout << "错误: 提供的路径既不是文件夹也不是.json文件" << endl;
-            cout << "用法: " << argv[0] << " [路径|文件夹|json文件]" << endl;
+            cout << "错误: 提供的路径只能是文件夹或*.json文件" << endl;
+            cout << "用法: " << argv[0] << " [文件夹|json文件]" << endl;
             return 1;
         }
     }
 
     rootDir = jsonFilePath.parent_path();
     
-    cout << "使用的JSON文件路径: " << jsonFilePath.string() << endl;
-    cout << "站点根目录: " << rootDir.string() << endl;
+    cout << "当前使用的JSON配置文件: " << jsonFilePath.string() << endl;
+    cout << "识别到站点根目录: " << rootDir.string() << endl;
     
     // 检查JSON文件是否存在
     if (!fs::exists(jsonFilePath)) {

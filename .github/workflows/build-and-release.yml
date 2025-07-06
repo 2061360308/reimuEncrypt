@@ -50,10 +50,30 @@ jobs:
       run: |
         mkdir -p artifact
         if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          cp ${{github.workspace}}/build/Release/reimuEncrypt.exe artifact/${{ matrix.artifact_name }}
+          # 查找可能的文件位置
+          echo "检查可能的构建输出位置"
+          find ${{github.workspace}}/build -name "*.exe" -type f
+          
+          # 使用更可靠的路径格式
+          if [ -f "${{github.workspace}}/build/Release/reimuEncrypt.exe" ]; then
+            cp "${{github.workspace}}/build/Release/reimuEncrypt.exe" "artifact/${{ matrix.artifact_name }}"
+          elif [ -f "${{github.workspace}}/build/reimuEncrypt.exe" ]; then
+            cp "${{github.workspace}}/build/reimuEncrypt.exe" "artifact/${{ matrix.artifact_name }}"
+          else
+            echo "无法找到构建的可执行文件"
+            exit 1
+          fi
         else
-          cp ${{github.workspace}}/build/reimuEncrypt artifact/${{ matrix.artifact_name }}
+          if [ -f "${{github.workspace}}/build/reimuEncrypt" ]; then
+            cp "${{github.workspace}}/build/reimuEncrypt" "artifact/${{ matrix.artifact_name }}"
+          else
+            echo "无法找到构建的可执行文件"
+            exit 1
+          fi
         fi
+        
+        # 确认文件是否已复制
+        ls -la artifact/
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
