@@ -10,22 +10,47 @@ on:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
+          # Linux (x64)
           - os: ubuntu-latest
-            artifact_name: reimuEncrypt-linux
-            asset_name: reimuEncrypt-linux
+            arch: x64
+            artifact_name: reimuEncrypt-linux-x64
+            asset_name: reimuEncrypt-linux-x64
+            
+          # Linux (ARM64)
+          - os: ubuntu-latest
+            arch: arm64
+            artifact_name: reimuEncrypt-linux-arm64
+            asset_name: reimuEncrypt-linux-arm64
+            
+          # Windows (x64)
           - os: windows-latest
-            artifact_name: reimuEncrypt-windows.exe
-            asset_name: reimuEncrypt-windows
+            arch: x64
+            artifact_name: reimuEncrypt-windows-x64.exe
+            asset_name: reimuEncrypt-windows-x64
+            
+          # Windows (x86)
+          - os: windows-latest
+            arch: x86
+            artifact_name: reimuEncrypt-windows-x86.exe
+            asset_name: reimuEncrypt-windows-x86
+            
+          # macOS (x64/Intel)
           - os: macos-latest
-            artifact_name: reimuEncrypt-macos
-            asset_name: reimuEncrypt-macos
+            arch: x64
+            artifact_name: reimuEncrypt-macos-x64
+            asset_name: reimuEncrypt-macos-x64
+            
+          # macOS (ARM64/Apple Silicon)
+          - os: macos-latest
+            arch: arm64
+            artifact_name: reimuEncrypt-macos-arm64
+            asset_name: reimuEncrypt-macos-arm64
 
     steps:
     - uses: actions/checkout@v3
@@ -34,11 +59,35 @@ jobs:
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
+      
+    # 安装 ARM64 交叉编译工具 (仅适用于 Linux ARM64 构建)
+    - name: Install ARM64 cross-compilation tools
+      if: matrix.os == 'ubuntu-latest' && matrix.arch == 'arm64'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ] && [ "${{ matrix.arch }}" == "x86" ]; then
+          # Windows x86
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -A Win32
+        elif [ "${{ matrix.os }}" == "macos-latest" ] && [ "${{ matrix.arch }}" == "arm64" ]; then
+          # macOS ARM64 (Apple Silicon)
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+        elif [ "${{ matrix.os }}" == "ubuntu-latest" ] && [ "${{ matrix.arch }}" == "arm64" ]; then
+          # Linux ARM64 (交叉编译)
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+        else
+          # 默认 x64 构建
+          cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
+        fi
 
     - name: Build
       working-directory: ${{github.workspace}}/build
@@ -55,7 +104,7 @@ jobs:
           echo "当前工作目录: $(pwd)"
           echo "GitHub workspace: ${{github.workspace}}"
           
-          # 使用正确的路径格式
+          # Windows 构建可能的输出位置
           if [ -f "${{github.workspace}}/build/Release/reimuEncrypt.exe" ]; then
             echo "找到 build/Release/reimuEncrypt.exe"
             cp "${{github.workspace}}/build/Release/reimuEncrypt.exe" "artifact/${{ matrix.artifact_name }}"
@@ -70,23 +119,45 @@ jobs:
             }
           fi
         else
+          # Linux/macOS 构建
           if [ -f "${{github.workspace}}/build/reimuEncrypt" ]; then
             cp "${{github.workspace}}/build/reimuEncrypt" "artifact/${{ matrix.artifact_name }}"
           else
-            echo "无法找到构建的可执行文件"
-            exit 1
+            echo "在常规位置未找到构建的可执行文件，尝试搜索整个构建目录"
+            find "${{github.workspace}}/build" -name "reimuEncrypt" -type f | head -1 | xargs -I{} cp "{}" "artifact/${{ matrix.artifact_name }}" || {
+              echo "无法找到构建的可执行文件"
+              exit 1
+            }
           fi
         fi
         
-        # 确认文件是否已复制
-        echo "检查生成的构件:"
-        ls -la artifact/
+        # 为可执行文件生成MD5校验文件
+        cd artifact
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          # Windows使用CertUtil来生成MD5
+          certutil -hashfile "${{ matrix.artifact_name }}" MD5 | grep -v "CertUtil" | grep -v "^$" > "${{ matrix.artifact_name }}.md5"
+          # 格式化输出，移除Windows行尾空格
+          sed -i 's/ *$//' "${{ matrix.artifact_name }}.md5"
+        else
+          # Linux/macOS使用md5sum
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            md5 -q "${{ matrix.artifact_name }}" > "${{ matrix.artifact_name }}.md5"
+          else
+            md5sum "${{ matrix.artifact_name }}" | cut -d ' ' -f1 > "${{ matrix.artifact_name }}.md5"
+          fi
+        fi
+        
+        # 确认文件是否已复制和MD5是否已生成
+        echo "检查生成的构件及MD5文件:"
+        ls -la ./
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
-        path: artifact/${{ matrix.artifact_name }}
+        path: |
+          artifact/${{ matrix.artifact_name }}
+          artifact/${{ matrix.artifact_name }}.md5
 
   release:
     name: Create or Update Release
@@ -102,21 +173,16 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
 
-      - name: Get tag or create tag for latest build
+      - name: Get tag or create date-based tag for build
         id: tag
         run: |
           if [[ ${{ github.ref }} == refs/tags/v* ]]; then
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
             echo "Using existing tag: ${GITHUB_REF#refs/tags/}"
           else
-            latest_tag=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name 2>/dev/null || echo "")
-            if [[ -z "$latest_tag" || "$latest_tag" == "null" ]]; then
-              echo "tag=latest" >> $GITHUB_OUTPUT
-              echo "Creating new latest tag"
-            else
-              echo "tag=$latest_tag" >> $GITHUB_OUTPUT
-              echo "Using existing latest tag: $latest_tag"
-            fi
+            date_tag="v$(date +'%Y%m%d%H%M%S')"
+            echo "tag=$date_tag" >> $GITHUB_OUTPUT
+            echo "Creating new date-based tag: $date_tag"
           fi
 
       - name: Create or Update Release
@@ -127,9 +193,18 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            reimuEncrypt-linux/reimuEncrypt-linux
-            reimuEncrypt-windows/reimuEncrypt-windows.exe
-            reimuEncrypt-macos/reimuEncrypt-macos
+            reimuEncrypt-linux-x64/reimuEncrypt-linux-x64
+            reimuEncrypt-linux-x64/reimuEncrypt-linux-x64.md5
+            reimuEncrypt-linux-arm64/reimuEncrypt-linux-arm64
+            reimuEncrypt-linux-arm64/reimuEncrypt-linux-arm64.md5
+            reimuEncrypt-windows-x64/reimuEncrypt-windows-x64.exe
+            reimuEncrypt-windows-x64/reimuEncrypt-windows-x64.exe.md5
+            reimuEncrypt-windows-x86/reimuEncrypt-windows-x86.exe
+            reimuEncrypt-windows-x86/reimuEncrypt-windows-x86.exe.md5
+            reimuEncrypt-macos-x64/reimuEncrypt-macos-x64
+            reimuEncrypt-macos-x64/reimuEncrypt-macos-x64.md5
+            reimuEncrypt-macos-arm64/reimuEncrypt-macos-arm64
+            reimuEncrypt-macos-arm64/reimuEncrypt-macos-arm64.md5
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
