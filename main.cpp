@@ -1,12 +1,14 @@
 ﻿#include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "aceEncrypt.h"
 #include "prase.h"
 
 using namespace std;
+namespace fs = std::filesystem;
 
-int main()
+int main(int argc, char* argv[])
 {
     // 确定encrypted.json文件的路径
     fs::path jsonFilePath;
