@@ -4,9 +4,11 @@
 
 #include "aceEncrypt.h"
 #include "prase.h"
+#include "nlohmann/json.hpp"
 
 using namespace std;
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 int main(int argc, char* argv[])
 {
@@ -46,6 +48,38 @@ int main(int argc, char* argv[])
     // 检查JSON文件是否存在
     if (!fs::exists(jsonFilePath)) {
         cout << "错误: 无法找到文件 " << jsonFilePath.string() << endl;
+        return 1;
+    }
+
+
+    // 读取JSON配置文件
+    json configJson;
+    try {
+        ifstream jsonFile(jsonFilePath);
+        if (!jsonFile.is_open()) {
+            cout << "错误: 无法打开JSON文件" << endl;
+            return 1;
+        }
+        
+        jsonFile >> configJson;
+        jsonFile.close();
+        
+        cout << "成功读取JSON配置文件" << endl;
+        
+        // 打印JSON配置信息
+        if (configJson.contains("password")) {
+            cout << "找到加密密码配置" << endl;
+        }
+        
+        if (configJson.contains("files") && configJson["files"].is_array()) {
+            cout << "找到需要加密的文件列表，共" << configJson["files"].size() << "个文件" << endl;
+        }
+        
+    } catch (json::parse_error& e) {
+        cout << "JSON解析错误: " << e.what() << endl;
+        return 1;
+    } catch (exception& e) {
+        cout << "读取JSON文件时发生错误: " << e.what() << endl;
         return 1;
     }
 
