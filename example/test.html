@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AES 解密示例</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+            min-height: 100px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AES 解密工具</h1>
+        <p>此工具使用 Web Crypto API 实现与 C++ AesDecrypt 函数相同的功能。</p>
+        
+        <label for="encryptedData">加密数据 (Base64 格式):</label>
+        <textarea id="encryptedData" placeholder="粘贴 Base64 编码的加密数据..."></textarea>
+        
+        <label for="password">密码:</label>
+        <input type="password" id="password" placeholder="输入解密密码...">
+        
+        <button id="decryptButton">解密</button>
+        
+        <h3>解密结果:</h3>
+        <div id="result">解密结果将显示在这里...</div>
+    </div>
+
+    <script src="./decrypt.js"></script>
+
+    <script>
+        document.getElementById('decryptButton').addEventListener('click', async function() {
+            try {
+                const base64Data = document.getElementById('encryptedData').value.trim();
+                const password = document.getElementById('password').value;
+                
+                if (!base64Data || !password) {
+                    throw new Error('请填写加密数据和密码');
+                }
+
+                // 解密数据
+                const decryptedData = await encrypt(base64Data, password);
+                // 显示解密结果
+                document.getElementById('result').innerHTML = decryptedData;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<span class="error">${error.message}</span>`;
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

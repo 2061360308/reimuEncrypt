@@ -15,19 +15,71 @@ project ("reimuEncrypt")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# cryptopp-cmake忽略测试
-set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "Build testing" FORCE)
-set(CRYPTOPP_BUILD_DOCUMENTATION OFF CACHE BOOL "Build documentation" FORCE)
+# 在CMakeLists.txt中启用LTO
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
+  # 直接设置链接时间优化，而不使用复杂的检查
+  option(CMAKE_INTERPROCEDURAL_OPTIMIZATION "启用链接时间优化" ON)
+  message(STATUS "已设置链接时间优化选项(IPO/LTO)")
+else()
+  message(STATUS "CMake 版本太低，无法设置 IPO/LTO")
+endif()
+
+# 对于 MSVC 编译器，添加特定的链接时间优化标志
+if(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+  set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+  message(STATUS "为 MSVC 设置了 /GL 和 /LTCG 优化标志")
+endif()
+
+# 添加函数级优化标志
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffunction-sections -fdata-sections")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
+elseif(MSVC)
+  # MSVC有自己的优化选项
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:REF /OPT:ICF")
+endif()
+
+# 优化二进制大小
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os")
+elseif(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O1")
+endif()
+
 
 # 添加 Crypto++ CMake 项目
 set(CryptoCMake_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cryptopp-cmake")
+
+# cryptopp-cmake忽略测试
+set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "Build testing" FORCE)
+set(CRYPTOPP_BUILD_DOCUMENTATION OFF CACHE BOOL "Build documentation" FORCE)
 add_subdirectory("${CryptoCMake_DIR}")
 
 # 添加Lexbor子项目
 set(LEXBOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/lexbor")
+
+# 优化 Lexbor 子项目，只包含 HTML 解析相关功能
+set(LEXBOR_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_SEPARATELY OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+# 只启用必要的模块
+set(LEXBOR_BUILD_HTML ON CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_DOM ON CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_CSS ON CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_SELECTORS ON CACHE BOOL "" FORCE)
+# 禁用不需要的模块
+set(LEXBOR_BUILD_ENCODING OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_HTTP OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_NS OFF CACHE BOOL "" FORCE)
+set(LEXBOR_BUILD_UNICODE OFF CACHE BOOL "" FORCE)
+
 add_subdirectory("${LEXBOR_DIR}")
 
-# 添加 cpp-base64 库
+# 添加 cpp-base64 库 - 直接包含源文件
 set(CPP_BASE64_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cpp-base64")
 set(CPP_BASE64_SOURCES
     ${CPP_BASE64_DIR}/base64.cpp
@@ -51,8 +103,10 @@ include_directories(
 set(PROJECT_SOURCE_FILES
     aceEncrypt.h
     aceEncrypt.cpp  # 包含加密逻辑
-    prase.h
-    prase.cpp  # 包含解析html逻辑
+    praseHtml.h
+    praseHtml.cpp  # 包含解析html逻辑
+    tool.h
+    tool.cpp  # 包含工具函数和日志记录逻辑
     main.cpp  # 主程序入口
     ${CPP_BASE64_SOURCES}
 )
