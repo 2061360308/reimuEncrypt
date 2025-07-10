@@ -3,35 +3,9 @@
 #include <filesystem>
 #include "aceEncrypt.h"
 #include "praseHtml.h"
-#include "nlohmann/json.hpp"
 #include "tool.h"
 
 using namespace std;
-namespace fs = std::filesystem;
-using json = nlohmann::json;
-
-// 字符串全替换
-std::string replaceAll(std::string str, const std::string &from, const std::string &to) {
-    size_t start_pos = 0;
-    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
-        str.replace(start_pos, from.length(), to);
-        start_pos += to.length();
-    }
-    return str;
-}
-
-// 获取HTML内容
-string getHtmlContent(const string& filePath, const string& selector) {
-    string htmlContent = readFileToString(filePath);
-    if (htmlContent.empty()) {
-        cerr << "无法读取HTML文件或文件为空: " << filePath << endl;
-        logToFile("无法读取HTML文件或文件为空: " + filePath, LogLevel::ERROR);
-        return "";
-    }
-    string result = querySelector(htmlContent, selector, 0);
-    logToFile("getHtmlContent: file=" + filePath + " selector=" + selector + " result.length=" + std::to_string(result.length()), LogLevel::DEBUG);
-    return result;
-}
 
 // 解析命令行参数，确定配置文件路径和根目录
 bool parseInputPath(int argc, char* argv[], fs::path& jsonFilePath) {
@@ -58,72 +32,15 @@ bool parseInputPath(int argc, char* argv[], fs::path& jsonFilePath) {
     return false;
 }
 
-// 读取JSON配置文件
-bool loadConfigJson(const fs::path& jsonFilePath, json& configJson) {
-    if (!fs::exists(jsonFilePath)) {
-        cerr << "错误: 无法找到文件 " << jsonFilePath.string() << endl;
-        logToFile("错误: 无法找到文件 " + jsonFilePath.string(), LogLevel::ERROR);
-        return false;
-    }
-    try {
-        ifstream jsonFile(jsonFilePath);
-        if (!jsonFile.is_open()) {
-            cerr << "错误: 无法打开JSON文件" << endl;
-            logToFile("错误: 无法打开JSON文件", LogLevel::ERROR);
-            return false;
-        }
-        jsonFile >> configJson;
-        jsonFile.close();
-        cout << "成功读取JSON配置文件" << endl;
-        logToFile("成功读取JSON配置文件: " + jsonFilePath.string(), LogLevel::INFO);
-    } catch (json::parse_error &e) {
-        cerr << "JSON解析错误: " << endl;
-        logToFile(std::string("JSON解析错误: ") + e.what(), LogLevel::ERROR);
-        return false;
-    } catch (exception &e) {
-        cerr << "读取JSON文件时发生错误: " << endl;
-        logToFile(std::string("读取JSON文件时发生错误: ") + e.what(), LogLevel::ERROR);
-        return false;
-    }
-    return true;
-}
-
 // 读取模板内容
-string loadTemplate(const fs::path& templatePath) {
-    if (!fs::exists(templatePath)) {
-        cerr << "错误: 模板文件不存在: " << templatePath.string() << endl;
-        logToFile("错误: 模板文件不存在: " + templatePath.string(), LogLevel::ERROR);
+string loadTemplateJs(const fs::path& templateJsPath) {
+    if (!fs::exists(templateJsPath)) {
+        cerr << "错误: 模板文件不存在: " << templateJsPath.string() << endl;
+        logToFile("错误: 模板文件不存在: " + templateJsPath.string(), LogLevel::ERROR);
         return "";
     }
-    logToFile("读取模板内容: " + templatePath.string(), LogLevel::DEBUG);
-    return readFileToString(templatePath.string());
-}
-
-std::string urlDecode(const std::string& str) {
-    std::string result;
-    size_t i = 0;
-    while (i < str.length()) {
-        if (str[i] == '%' && i + 2 < str.length()) {
-            // 解析一个字节
-            int value = 0;
-            std::istringstream iss(str.substr(i + 1, 2));
-            if (iss >> std::hex >> value) {
-                result += static_cast<char>(value);
-                i += 3;
-            } else {
-                // 非法转义，原样输出
-                result += '%';
-                i++;
-            }
-        } else if (str[i] == '+') {
-            result += ' ';
-            i++;
-        } else {
-            result += str[i];
-            i++;
-        }
-    }
-    return result;
+    logToFile("读取模板内容: " + templateJsPath.string(), LogLevel::DEBUG);
+    return readFileToString(templateJsPath.string());
 }
 
 string getHtmlPath(string baseUrl, string permalink){
@@ -168,8 +85,6 @@ void processArticle(
     string filePath = getHtmlPath(baseUrl, permalink);
     fs::path articlePath = rootDir / fs::path(filePath);
 
-    // fs::path articlePath = fs::path("E:\\hugo-reimu\\public\\post\\main---副本\\index.html");
-
     cout << "## 处理文章: " << title << ", 路径: " << articlePath.string() << endl;
     logToFile("处理文章: " + title + ", 路径: " + articlePath.string(), LogLevel::INFO);
 
@@ -188,14 +103,17 @@ void processArticle(
             continue;
         }
 
-        string content = getHtmlContent(articlePath.string(), selector);
+        // string content = getHtmlContent(articlePath.string(), selector);
+        string htmlContent = readFileToString(articlePath.string());
+        LexborDocument doc(htmlContent);
+        auto root = doc.root();
+        auto node = root->querySelector(selector);
+        string content = node ? node->getContent() : "";
 
         try {
             if (encrypt && !content.empty()) {
                 string encryptedContent = AesEncrypt(content, password);
-                string encryptedBase64 = base64_encode(
-                    reinterpret_cast<const unsigned char*>(encryptedContent.data()),
-                    encryptedContent.size());
+                string encryptedBase64 = base64Encode(encryptedContent);
                 logToFile("加密内容: " + name + ", 内容(Base64前100): " + encryptedBase64.substr(0, 100), LogLevel::DEBUG);
                 data[name] = encryptedBase64;
             } else {
@@ -241,7 +159,20 @@ bool removeEncryptConfigFile(fs::path jsonFilePath) {
     }
 }
 
+void testLexbor() {
+    string html = "<html><body><div class='test'>Hello World</div></body></html>";
+    LexborDocument doc(html);
+    auto root = doc.root();
+    auto node = root->querySelector(".test");
+    if (node) {
+        cout << "查询到内容: " << node->getContent() << endl;
+    } else {
+        cout << "未查询到内容" << endl;
+    }
+}
+
 int main(int argc, char *argv[]) {
+    testLexbor();
 
     logToFile("##### Hello reimuEncrypt #####", LogLevel::INFO);
 
@@ -263,21 +194,21 @@ int main(int argc, char *argv[]) {
 
     // 计算最终根目录
     rootDir = fs::absolute(jsonFilePath.parent_path() / fs::path(_rootDir));
-    fs::path templatePath = rootDir / fs::path(tpl);
+    fs::path templateJsPath = rootDir / fs::path(tpl);
 
     cout << "识别到站点根目录: " << rootDir.string() << endl;
     logToFile("识别到站点根目录: " + rootDir.string(), LogLevel::INFO);
-    cout << "使用的模板文件: " << templatePath.string() << endl;
-    logToFile("使用的模板文件: " + templatePath.string(), LogLevel::INFO);
+    cout << "使用的模板文件: " << templateJsPath.string() << endl;
+    logToFile("使用的模板文件: " + templateJsPath.string(), LogLevel::INFO);
 
-    string templateContent = loadTemplate(templatePath);
-    if (templateContent.empty()) return 1;
+    string templateJsContent = loadTemplateJs(templateJsPath);
+    if (templateJsContent.empty()) return 1;
 
     // 主处理循环
     if (configJson.contains("encrypted") && configJson["encrypted"].is_array() &&
         configJson.contains("articles") && configJson["articles"].is_array()) {
         for (const auto &article : configJson["articles"]) {
-            processArticle(article, configJson, rootDir, baseUrl, templateContent, defaultPassword);
+            processArticle(article, configJson, rootDir, baseUrl, templateJsContent, defaultPassword);
         }
     } else {
         cerr << "配置文件缺少 encrypted 或 articles 数组，或格式不正确。" << endl;

@@ -12,6 +12,8 @@
 #undef ERROR
 #endif
 
+using namespace std;
+
 static const char* levelToStr(LogLevel level) {
     switch (level) {
         case LogLevel::DEBUG: return "DEBUG";
@@ -30,6 +32,17 @@ void logToFile(const std::string& msg, LogLevel level) {
     logFile << "[" << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << "]";
     logFile << "[" << levelToStr(level) << "] ";
     logFile << msg << std::endl;
+}
+
+std::string base64Encode(const std::string& input) {
+    std::string encoded;
+    CryptoPP::StringSource ss(
+        input, true,
+        new CryptoPP::Base64Encoder(
+            new CryptoPP::StringSink(encoded), false // false 表示不自动换行
+        )
+    );
+    return encoded;
 }
 
 // 读取整个文件内容到字符串（支持Windows下UTF-8路径）
@@ -93,4 +106,72 @@ bool writeStringToFile(const std::string& filePath, const std::string& content) 
     file.write(reinterpret_cast<const char*>(bom), 3);
     file << content;
     return file.good();
+}
+
+// 字符串全替换
+std::string replaceAll(std::string str, const std::string &from, const std::string &to) {
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();
+    }
+    return str;
+}
+
+// 读取JSON配置文件
+bool loadConfigJson(const fs::path& jsonFilePath, json& configJson) {
+    if (!fs::exists(jsonFilePath)) {
+        cerr << "错误: 无法找到文件 " << jsonFilePath.string() << endl;
+        logToFile("错误: 无法找到文件 " + jsonFilePath.string(), LogLevel::ERROR);
+        return false;
+    }
+    try {
+        ifstream jsonFile(jsonFilePath);
+        if (!jsonFile.is_open()) {
+            cerr << "错误: 无法打开JSON文件" << endl;
+            logToFile("错误: 无法打开JSON文件", LogLevel::ERROR);
+            return false;
+        }
+        jsonFile >> configJson;
+        jsonFile.close();
+        cout << "成功读取JSON配置文件" << endl;
+        logToFile("成功读取JSON配置文件: " + jsonFilePath.string(), LogLevel::INFO);
+    } catch (json::parse_error &e) {
+        cerr << "JSON解析错误: " << endl;
+        logToFile(std::string("JSON解析错误: ") + e.what(), LogLevel::ERROR);
+        return false;
+    } catch (exception &e) {
+        cerr << "读取JSON文件时发生错误: " << endl;
+        logToFile(std::string("读取JSON文件时发生错误: ") + e.what(), LogLevel::ERROR);
+        return false;
+    }
+    return true;
+}
+
+// URL解码函数
+std::string urlDecode(const std::string& str) {
+    std::string result;
+    size_t i = 0;
+    while (i < str.length()) {
+        if (str[i] == '%' && i + 2 < str.length()) {
+            // 解析一个字节
+            int value = 0;
+            std::istringstream iss(str.substr(i + 1, 2));
+            if (iss >> std::hex >> value) {
+                result += static_cast<char>(value);
+                i += 3;
+            } else {
+                // 非法转义，原样输出
+                result += '%';
+                i++;
+            }
+        } else if (str[i] == '+') {
+            result += ' ';
+            i++;
+        } else {
+            result += str[i];
+            i++;
+        }
+    }
+    return result;
 }

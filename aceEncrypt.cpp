@@ -1,5 +1,10 @@
-﻿#include "aceEncrypt.h"
-#include "tool.h" // 引入日志工具
+﻿#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <random>
+
+#include "aceEncrypt.h"
+#include "tool.h"
 
 using namespace std;
 
@@ -13,41 +18,6 @@ void printHex(const string& title, const uint8_t* data, size_t len) {
         cout << hex << setw(2) << setfill('0') << static_cast<int>(data[i]) << " ";
     }
     cout << dec << endl;
-}
-
-// 保存加密数据为 Base64 编码文本
-bool saveEncryptedDataAsBase64(const vector<uint8_t>& data, const string& filename) {
-    ofstream file(filename);
-    if (!file) {
-        cerr << "无法打开文件进行写入: " << filename << endl;
-        logToFile("无法打开文件进行写入: " + filename, LogLevel::ERROR);
-        return false;
-    }
-    
-    // 转换为 Base64
-    string encoded = base64_encode(data.data(), data.size());
-    file << encoded;
-    logToFile("加密数据已保存为Base64到文件: " + filename, LogLevel::INFO);
-    
-    return file.good();
-}
-
-// 从 Base64 编码文本加载加密数据
-vector<uint8_t> loadEncryptedDataFromBase64(const string& filename) {
-    ifstream file(filename);
-    if (!file) {
-        cerr << "无法打开文件进行读取: " << filename << endl;
-        logToFile("无法打开文件进行读取: " + filename, LogLevel::ERROR);
-        return {};
-    }
-    
-    // 读取整个文件内容
-    string encoded((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-    
-    // Base64 解码
-    string decoded = base64_decode(encoded);
-    logToFile("已从Base64文件加载加密数据: " + filename, LogLevel::INFO);
-    return vector<uint8_t>(decoded.begin(), decoded.end());
 }
 
 // 生成随机IV

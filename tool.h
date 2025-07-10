@@ -1,5 +1,11 @@
 ﻿#pragma once
 #include <string>
+#include <filesystem>
+#include <cryptopp/base64.h>
+#include "nlohmann/json.hpp"
+
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 enum class LogLevel {
     DEBUG,
@@ -15,6 +21,10 @@ enum class LogLevel {
  * @param level 日志级别，默认为INFO
  */
 void logToFile(const std::string& msg, LogLevel level = LogLevel::INFO);
+
+
+std::string base64Encode(const std::string& input);
+
 
 /**
  * 读取整个文件内容到字符串
@@ -33,3 +43,12 @@ std::string readFileToString(const std::string& filePath, const std::string& enc
  * @return 操作是否成功
  */
 bool writeStringToFile(const std::string& filePath, const std::string& content);
+
+// 字符串全替换
+std::string replaceAll(std::string str, const std::string &from, const std::string &to);
+
+// 读取JSON配置文件
+bool loadConfigJson(const fs::path& jsonFilePath, json& configJson);
+
+// URL解码函数
+std::string urlDecode(const std::string& str);

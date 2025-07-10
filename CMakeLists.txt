@@ -81,11 +81,11 @@ set(LEXBOR_BUILD_UNICODE OFF CACHE BOOL "" FORCE)
 
 add_subdirectory("${LEXBOR_DIR}")
 
-# 添加 cpp-base64 库 - 直接包含源文件
-set(CPP_BASE64_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cpp-base64")
-set(CPP_BASE64_SOURCES
-    ${CPP_BASE64_DIR}/base64.cpp
-)
+# # 添加 cpp-base64 库 - 直接包含源文件
+# set(CPP_BASE64_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/cpp-base64")
+# set(CPP_BASE64_SOURCES
+#     ${CPP_BASE64_DIR}/base64.cpp
+# )
 
 # 添加 nlohmann-json 库
 set(NlohmannJson_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/json")
@@ -94,7 +94,7 @@ add_subdirectory("${NlohmannJson_DIR}")
 # 添加包含目录
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CPP_BASE64_DIR}
+    # ${CPP_BASE64_DIR}
     ${LEXBOR_DIR}/source
     ${LEXBOR_DIR}/source/lexbor/html
     ${LEXBOR_DIR}/source/lexbor/css
