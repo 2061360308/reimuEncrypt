@@ -56,6 +56,31 @@ cmake ..
 make
 ```
 
+## 🛠️ 开发说明
+
+本项目结构清晰，核心处理流程主要集中在 `main.cpp`，建议先阅读[主流程说明](./docs/MAIN-PROCESS.md)快速了解整体逻辑。  
+
+各功能模块（如加密、HTML解析、配置加载等）分别在对应的源文件中实现，具体职责可参考下方的目录结构说明。  
+如需深入某一功能，只需定位相关模块源码即可，无需通读全部代码。
+
+
+### 📁 目录结构
+
+```
+reimuEncrypt/
+├── aceEncrypt.cpp 加密
+├── praseHtml.cpp  解析并提取html
+├── encryptConfig.cpp  # 加载加密配置json
+├── tool.cpp       辅助函数
+├── main.cpp       入口
+├── README.md
+├── deps           项目依赖
+├── example        示例内容
+└── ...
+```
+
+
+
 
 ## ⚡ 快速上手
 
@@ -164,21 +189,6 @@ make
 要了解程序运行情况可以查看输出与日志
 - 简略信息会在控制台输出
 - 详细信息可以查看日志文件 `log.txt`
-
-## 📁 目录结构
-
-```
-reimuEncrypt/
-├── aceEncrypt.cpp 加密
-├── praseHtml.cpp  解析并提取html
-├── encryptConfig.cpp  # 加载加密配置json
-├── tool.cpp       辅助函数
-├── main.cpp       入口
-├── README.md
-├── deps           项目依赖
-├── example        示例内容
-└── ...
-```
 
 ## Hugo主题集成详细指南
 
