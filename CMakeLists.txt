@@ -112,7 +112,6 @@ set(PROJECT_SOURCE_FILES
     tool.h
     tool.cpp  # 包含工具函数和日志记录逻辑
     main.cpp  # 主程序入口
-    ${CPP_BASE64_SOURCES}
 )
 
 # 创建可执行文件

@@ -1,38 +1,36 @@
 {
-  "generatedAt": "2025-07-07T16:37:45+08:00",
-  "totalCount": 2,
+  "generatedAt": "2025-07-11T19:49:47+08:00",
+  "totalCount": 1,
   "defaultPassword": "123456",
-  "template": "encrypt/index.html",
-  "rootDir": "../",
-  "baseURL": "https://example.org/",
-  "encrypted": [
+  "encrypted-all": [
     {
       "name": "article",
       "selector": "article",
-      "encrypt": true
-    },
-    {
-      "name": "title",
-      "selector": "#header-title h1",
-      "encrypt": false
+      "selectAll": false,
+      "replace": {
+        "innerHTML": false,
+        "content": ""
+      },
+      "password": ""
     },
     {
       "name": "sidebar",
-      "selector": "#sidebar",
-      "encrypt": true
+      "selector": "#TableOfContents",
+      "selectAll": false,
+      "replace": {
+        "innerHTML": false,
+        "content": ""
+      }
     }
   ],
-  "articles": [{
-        "title": "Markdown Basic Elements",
-        "permalink": "https://example.org/post/main/",
-        "relPermalink": "/post/main/",
-        "filePath": "post/main/index.html",
-        "outputPath": "/post/main/",
-        "uniqueID": "51f72b80a80d6a49000862e4282ab7a0", "password": "secretpassword123"},{
-        "title": "Markdown Basic Elements2",
-        "permalink": "https://example.org/post/main---%E5%89%AF%E6%9C%AC/",
-        "relPermalink": "/post/main---%E5%89%AF%E6%9C%AC/",
-        "filePath": "post/main - 副本/index.html",
-        "outputPath": "/post/main---%E5%89%AF%E6%9C%AC/",
-        "uniqueID": "9c1fad5e0d0d03cc17a3dacb58392ca2", "password": "secretpassword123"}]
+  "encrypted-partial": [],
+  "articles": [
+    {
+      "title": "Markdown Basic Elements",
+      "filePath": "post/main/index.html",
+      "uniqueID": "51f72b80a80d6a49000862e4282ab7a0",
+      "password": "secretpassword123",
+      "all": true
+    }
+  ]
 }
