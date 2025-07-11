@@ -107,6 +107,8 @@ set(PROJECT_SOURCE_FILES
     aceEncrypt.cpp  # 包含加密逻辑
     praseHtml.h
     praseHtml.cpp  # 包含解析html逻辑
+    encryptConfig.h
+    encryptConfig.cpp  # 加载加密配置json
     tool.h
     tool.cpp  # 包含工具函数和日志记录逻辑
     main.cpp  # 主程序入口
