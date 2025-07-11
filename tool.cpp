@@ -55,7 +55,7 @@ std::string readFileToString(const std::string& filePath, const std::string& enc
         std::cerr << "路径转码失败: " << filePath << std::endl;
         return "";
     }
-    std::wstring wpath(wlen, 0);
+    std::wstring wpath(wlen - 1, 0); // -1 去掉结尾\0
     MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &wpath[0], wlen);
     std::ifstream file(wpath, std::ios::binary);
 #else
@@ -91,7 +91,7 @@ bool writeStringToFile(const std::string& filePath, const std::string& content) 
         std::cerr << "路径转码失败: " << filePath << std::endl;
         return false;
     }
-    std::wstring wpath(wlen, 0);
+    std::wstring wpath(wlen - 1, 0); // -1 去掉结尾\0
     MultiByteToWideChar(CP_UTF8, 0, filePath.c_str(), -1, &wpath[0], wlen);
     std::ofstream file(wpath, std::ios::binary);
 #else

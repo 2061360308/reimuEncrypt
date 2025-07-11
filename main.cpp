@@ -159,20 +159,10 @@ bool removeEncryptConfigFile(fs::path jsonFilePath) {
     }
 }
 
-void testLexbor() {
-    string html = "<html><body><div class='test'>Hello World</div></body></html>";
-    LexborDocument doc(html);
-    auto root = doc.root();
-    auto node = root->querySelector(".test");
-    if (node) {
-        cout << "查询到内容: " << node->getContent() << endl;
-    } else {
-        cout << "未查询到内容" << endl;
-    }
-}
-
 int main(int argc, char *argv[]) {
     testLexbor();
+
+    testLexborFromFile();
 
     logToFile("##### Hello reimuEncrypt #####", LogLevel::INFO);
 
