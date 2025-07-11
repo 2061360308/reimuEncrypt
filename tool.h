@@ -43,12 +43,3 @@ std::string readFileToString(const std::string& filePath, const std::string& enc
  * @return 操作是否成功
  */
 bool writeStringToFile(const std::string& filePath, const std::string& content);
-
-// 字符串全替换
-std::string replaceAll(std::string str, const std::string &from, const std::string &to);
-
-// 读取JSON配置文件
-bool loadConfigJson(const fs::path& jsonFilePath, json& configJson);
-
-// URL解码函数
-std::string urlDecode(const std::string& str);

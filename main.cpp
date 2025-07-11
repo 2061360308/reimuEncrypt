@@ -8,6 +8,18 @@
 
 using namespace std;
 
+const std::string ENCRYPT_JS = R"(
+<script>
+/**
+* 解密函数
+* @param {*} base64Data base64编码的加密数据
+* @param {*} password 解密密码
+* @returns {Promise<string>} 解密后的明文数据
+*/
+async function encrypt(base64Data,password){if(!base64Data||!password){throw new Error("请填写加密数据和密码");}const encryptedBytes=base64ToArrayBuffer(base64Data);if(encryptedBytes.byteLength<32){throw new Error("加密数据长度不足，无法解密");}const salt=encryptedBytes.slice(0,16);const iv=encryptedBytes.slice(16,32);const ciphertext=encryptedBytes.slice(32);const key=await deriveKeyFromPassword(password,salt);const decrypted=await decryptData(ciphertext,key,iv);return decrypted}async function deriveKeyFromPassword(password,salt){const passwordBuffer=new TextEncoder().encode(password);const passwordKey=await window.crypto.subtle.importKey("raw",passwordBuffer,{name:"PBKDF2"},false,["deriveBits","deriveKey"]);return await window.crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:10000,hash:"SHA-256",},passwordKey,{name:"AES-CBC",length:256},false,["decrypt"])}async function decryptData(ciphertext,key,iv){try{const decryptedBuffer=await window.crypto.subtle.decrypt({name:"AES-CBC",iv:iv,},key,ciphertext);return new TextDecoder().decode(decryptedBuffer)}catch(error){throw new Error("解密失败: "+error.message);}}function base64ToArrayBuffer(base64){const binaryString=atob(base64);const bytes=new Uint8Array(binaryString.length);for(let i=0;i<binaryString.length;i++){bytes[i]=binaryString.charCodeAt(i)}return bytes.buffer}
+</script>
+)";
+
 EncryptConfig config;  // 全局加密配置对象
 fs::path jsonFilePath, rootDir;  // 配置文件路径、根目录
 
@@ -38,47 +50,6 @@ bool parseInputPath(int argc, char* argv[], fs::path& jsonFilePath, fs::path& ro
     cerr << "用法: " << argv[0] << " [文件夹|json文件]" << endl;
     return false;
 }
-
-// 读取模板内容
-string loadTemplateJs(const fs::path& templateJsPath) {
-    if (!fs::exists(templateJsPath)) {
-        cerr << "错误: 模板文件不存在: " << templateJsPath.string() << endl;
-        logToFile("错误: 模板文件不存在: " + templateJsPath.string(), LogLevel::ERROR);
-        return "";
-    }
-    logToFile("读取模板内容: " + templateJsPath.string(), LogLevel::DEBUG);
-    return readFileToString(templateJsPath.string());
-}
-
-string getHtmlPath(string baseUrl, string permalink){
-    // 删除permalink前的baseUrl部分
-    permalink = replaceAll(permalink, baseUrl, "");
-    // 去除前导斜杠
-    if (!permalink.empty() && (permalink[0] == '/' || permalink[0] == '\\')) {
-        permalink.erase(0, 1);
-    }
-    // 统一斜杠
-    permalink = replaceAll(permalink, "\\", "/");
-
-    // 判断最后一个字符是不是'/'
-    if (!permalink.empty() && permalink.back() != '/') {
-        permalink = permalink + "/index.html";
-    } else {
-        permalink = permalink + "index.html";
-    }
-    // 处理url解码
-    permalink = urlDecode(permalink);
-
-    std::ofstream f("test.txt", std::ios::binary);
-    f << permalink;
-    f.close();
-
-    return permalink;
-}
-
-void processAllArticles(){}
-
-void processPartialArticles(){}
 
 string processNode(string defaultPassword,
                 const std::shared_ptr<LexborNode> &node,
@@ -157,7 +128,7 @@ void processArticle(
                   ", password=" + item.password, LogLevel::DEBUG);
         
         // 设置默认密码
-        string defaultPassword = config.defaultPassword;
+        string defaultPassword = article.password;
         if (article.password.empty()) {
             defaultPassword = config.defaultPassword;
         }
@@ -177,6 +148,7 @@ void processArticle(
     auto headNode = docRoot->querySelector("head");
     if (headNode) {
         headNode->appendHtml("<script>var __ENCRYPT_DATA__ = " + result.dump() + ";</script>");
+        headNode->appendHtml(ENCRYPT_JS);
     } else {
         cerr << "未找到<head>节点，无法写入加密数据。" << endl;
         logToFile("未找到<head>节点，无法写入加密数据。", LogLevel::ERROR);

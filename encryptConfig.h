@@ -61,9 +61,6 @@ struct EncryptConfig {
     std::string generatedAt;
     int totalCount = 0;
     std::string defaultPassword;
-    std::string templatePath;
-    std::string rootDir;
-    std::string baseURL;
     std::vector<EncryptedItem> encryptedAll;  // 文章整体加密配置项
     std::vector<EncryptedItem> encryptedPartial;  // 文章局部加密配置项
     std::vector<ArticleItem> articles;
@@ -73,10 +70,7 @@ struct EncryptConfig {
         if (j.contains("generatedAt")) cfg.generatedAt = j["generatedAt"].get<std::string>();
         if (j.contains("totalCount")) cfg.totalCount = j["totalCount"].get<int>();
         if (j.contains("defaultPassword")) cfg.defaultPassword = j["defaultPassword"].get<std::string>();
-        if (j.contains("template")) cfg.templatePath = j["template"].get<std::string>();
-        if (j.contains("rootDir")) cfg.rootDir = j["rootDir"].get<std::string>();
-        if (j.contains("baseURL")) cfg.baseURL = j["baseURL"].get<std::string>();
-
+        
         if (j.contains("encrypted-all")) {
             for (const auto& item : j["encrypted-all"]) {
                 cfg.encryptedAll.push_back(EncryptedItem::fromJson(item));
