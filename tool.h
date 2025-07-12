@@ -43,3 +43,18 @@ std::string readFileToString(const std::string& filePath, const std::string& enc
  * @return 操作是否成功
  */
 bool writeStringToFile(const std::string& filePath, const std::string& content);
+
+/**
+ * 将字符串进行UTF-8编码的修剪，去除首尾空白字符
+ * 
+ * @param str 输入字符串
+ * @return 修剪后的字符串
+ */
+std::string trim(const std::string& str);
+
+/**
+ * URL解码
+ * @param str 编码的URL字符串
+ * @return 解码后的URL字符串
+ */
+std::string decodeUrl(const std::string& str);

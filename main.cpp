@@ -62,11 +62,12 @@ string processNode(string defaultPassword,
         password = defaultPassword;
     } else {
         password = node->querySelector(item.password)->getContent();
+        password = trim(password);
         if (password.empty()) {
             password = defaultPassword;
         }
     }
-    string content = node->getContent();
+    string content = node->getHtml();
     if (!content.empty()) {
         string encryptedContent = AesEncrypt(content, password);
         encryptedBase64 = base64Encode(encryptedContent);
@@ -155,7 +156,7 @@ void processArticle(
         return;
     }
     // 写出文件
-    if (!writeStringToFile(filePath.string(), docRoot->getContent())) {
+    if (!writeStringToFile(filePath.string(), docRoot->getHtml())) {
         cerr << "写入文件失败: " << filePath.string() << endl;
         logToFile("写入文件失败: " + filePath.string(), LogLevel::ERROR);
     } else {

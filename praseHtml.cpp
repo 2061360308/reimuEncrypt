@@ -152,13 +152,36 @@ std::vector<std::shared_ptr<LexborNode>> LexborNode::children() {
 }
 
 
-std::string LexborNode::getContent() {
+std::string LexborNode::getHtml() {
     lexbor_str_t str = {0};
     std::string result;
     if (lxb_html_serialize_tree_str(node_, &str) == LXB_STATUS_OK && str.data) {
         result.assign((const char*)str.data, str.length);
         lexbor_str_destroy(&str, document_->dom_document.text, false);
     }
+    return result;
+}
+
+std::string LexborNode::getContent() {
+    std::string result;
+    // 递归收集所有文本节点内容
+    std::function<void(lxb_dom_node_t*)> collectText;
+    collectText = [&](lxb_dom_node_t* node) {
+        if (!node) return;
+        if (node->type == LXB_DOM_NODE_TYPE_TEXT) {
+            lxb_dom_text_t* text = lxb_dom_interface_text(node);
+            // 直接访问 char_data.data.data 和 char_data.data.length
+            const lxb_char_t* data = text->char_data.data.data;
+            size_t len = text->char_data.data.length;
+            if (data && len > 0) {
+                result.append((const char*)data, len);
+            }
+        }
+        for (lxb_dom_node_t* child = node->first_child; child; child = child->next) {
+            collectText(child);
+        }
+    };
+    collectText(node_);
     return result;
 }
 

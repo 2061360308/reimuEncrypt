@@ -90,6 +90,12 @@ public:
      * 获取节点内容（含标签）
      * @return 节点的HTML字符串
      */
+    std::string getHtml();
+
+    /**
+     * 获取节点内容（不含标签）
+     * @return 节点的文本内容字符串
+     */
     std::string getContent();
 
     /**

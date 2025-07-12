@@ -107,3 +107,98 @@ bool writeStringToFile(const std::string& filePath, const std::string& content) 
     file << content;
     return file.good();
 }
+
+// 判断是否为指定的 UTF-8 空白字符
+inline bool is_utf8_space(uint32_t cp) {
+    // ASCII 空白
+    if (cp == 0x09 || cp == 0x0A || cp == 0x0B || cp == 0x0C || cp == 0x0D || cp == 0x20) return true;
+    // 不换行空格
+    if (cp == 0xA0) return true;
+    // 欧甘字母空格
+    if (cp == 0x1680) return true;
+    // 全角空格
+    if (cp == 0x3000) return true;
+    return false;
+}
+
+// 支持常见 UTF-8 空白的 trim
+std::string trim(const std::string& str) {
+    size_t len = str.size();
+    size_t first = 0, last = len;
+
+    // 前向扫描
+    while (first < len) {
+        unsigned char c = str[first];
+        uint32_t cp = 0;
+        size_t char_len = 1;
+        if (c < 0x80) {
+            cp = c;
+        } else if ((c & 0xE0) == 0xC0 && first + 1 < len) {
+            cp = ((c & 0x1F) << 6) | (str[first+1] & 0x3F);
+            char_len = 2;
+        } else if ((c & 0xF0) == 0xE0 && first + 2 < len) {
+            cp = ((c & 0x0F) << 12) | ((str[first+1] & 0x3F) << 6) | (str[first+2] & 0x3F);
+            char_len = 3;
+        } else if ((c & 0xF8) == 0xF0 && first + 3 < len) {
+            cp = ((c & 0x07) << 18) | ((str[first+1] & 0x3F) << 12) | ((str[first+2] & 0x3F) << 6) | (str[first+3] & 0x3F);
+            char_len = 4;
+        }
+        if (!is_utf8_space(cp)) break;
+        first += char_len;
+    }
+
+    // 反向扫描
+    while (last > first) {
+        size_t i = last;
+        // 找到前一个 codepoint 的起始
+        do { --i; } while (i > first && (str[i] & 0xC0) == 0x80);
+        unsigned char c = str[i];
+        uint32_t cp = 0;
+        size_t char_len = last - i;
+        if (c < 0x80) {
+            cp = c;
+        } else if ((c & 0xE0) == 0xC0 && char_len == 2) {
+            cp = ((c & 0x1F) << 6) | (str[i+1] & 0x3F);
+        } else if ((c & 0xF0) == 0xE0 && char_len == 3) {
+            cp = ((c & 0x0F) << 12) | ((str[i+1] & 0x3F) << 6) | (str[i+2] & 0x3F);
+        } else if ((c & 0xF8) == 0xF0 && char_len == 4) {
+            cp = ((c & 0x07) << 18) | ((str[i+1] & 0x3F) << 12) | ((str[i+2] & 0x3F) << 6) | (str[i+3] & 0x3F);
+        }
+        if (!is_utf8_space(cp)) break;
+        last = i;
+    }
+
+    return str.substr(first, last - first);
+}
+
+// URL 解码（percent-decode），返回 UTF-8 字符串
+std::string decodeUrl(const std::string& str) {
+    std::string result;
+    size_t i = 0;
+    while (i < str.size()) {
+        char ch = str[i];
+        if (ch == '%') {
+            if (i + 2 < str.size() && std::isxdigit(str[i + 1]) && std::isxdigit(str[i + 2])) {
+                // 解析两个十六进制数字
+                int high = std::toupper(str[i + 1]);
+                int low  = std::toupper(str[i + 2]);
+                high = high > '9' ? high - 'A' + 10 : high - '0';
+                low  = low  > '9' ? low  - 'A' + 10 : low  - '0';
+                char decoded = static_cast<char>((high << 4) | low);
+                result += decoded;
+                i += 3;
+            } else {
+                // 非法的 % 编码，原样输出
+                result += '%';
+                ++i;
+            }
+        } else if (ch == '+') {
+            result += ' '; // 按 application/x-www-form-urlencoded 规则
+            ++i;
+        } else {
+            result += ch;
+            ++i;
+        }
+    }
+    return result;
+}
